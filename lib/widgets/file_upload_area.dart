@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 class FileUploadArea extends StatelessWidget {
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool isLoading;
   final String? fileName;
 
   const FileUploadArea({
     Key? key,
-    required this.onTap,
+    this.onTap,
     required this.isLoading,
     this.fileName,
   }) : super(key: key);

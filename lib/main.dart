@@ -12,10 +12,9 @@ class PayslipApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Payslip Generator',
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-      ),
+      theme: ThemeData(primarySwatch: Colors.indigo),
       home: const HomePage(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
