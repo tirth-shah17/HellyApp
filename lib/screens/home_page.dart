@@ -9,6 +9,8 @@ import 'package:share_plus/share_plus.dart';
 import '../widgets/file_upload_area.dart';
 import '../services/api_service.dart';
 import 'package:path_provider/path_provider.dart';
+import 'pdf_preview_page.dart'; // 👈 Create this file if not already
+
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -153,31 +155,86 @@ class _HomePageState extends State<HomePage> {
                   itemBuilder: (context, index) {
                     final employee = employees[index];
                     return EmployeePdfCard(
-                      employee: employee,
-                      pdfUrl: employee.pdfUrl,
-                      onDownload: () async {
-                        if (employee.pdfUrl != null) {
-                          final response = await http.get(Uri.parse(employee.pdfUrl!));
-                          final dir = await getTemporaryDirectory();
-                          final filePath = '${dir.path}/${employee.name}_${employee.id}.pdf';
-                          final file = File(filePath);
-                          await file.writeAsBytes(response.bodyBytes);
+  employee: employee,
+  pdfUrl: employee.pdfUrl,
+  onDownload: () async {
+    if (employee.pdfUrl != null) {
+      try {
+        final fullUrl = 'https://backend-helly.onrender.com${employee.pdfUrl}';
+        final response = await http.get(Uri.parse(fullUrl));
 
-                          await Share.shareXFiles([XFile(filePath)], text: 'Payslip for ${employee.name}');
+        if (response.statusCode == 200) {
+          final dir = await getTemporaryDirectory();
+          final filePath = '${dir.path}/${employee.name}_${employee.id}.pdf';
+          final file = File(filePath);
+          await file.writeAsBytes(response.bodyBytes);
 
-                          setState(() {
-                            employee.isShared = true;
-                          });
+          await Share.shareXFiles([XFile(filePath)], text: 'Payslip for ${employee.name}');
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Shared payslip of ${employee.name}!'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
-                        }
-                      },
-                    );
+          setState(() {
+            employee.isShared = true;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Shared payslip of ${employee.name}!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to download PDF.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sharing: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  },
+  onTap: () async {
+    if (employee.pdfUrl != null) {
+      final fullUrl = 'https://backend-helly.onrender.com${employee.pdfUrl}';
+
+      try {
+        final response = await http.get(Uri.parse(fullUrl));
+
+        if (response.statusCode == 200) {
+          final dir = await getTemporaryDirectory();
+          final localPath = '${dir.path}/${employee.name}_${employee.id}.pdf';
+          final file = File(localPath);
+          await file.writeAsBytes(response.bodyBytes);
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PdfPreviewPage(filePath: localPath),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to fetch PDF')),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading PDF: $e')),
+        );
+      }
+    }
+  },
+);
+
+
+
+    
                   },
                 ),
               ),
