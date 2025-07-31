@@ -1,7 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:payslip_app/models/employee.dart';
+import 'package:payslip_app/widgets/employee_pdf_card.dart';
+import 'package:share_plus/share_plus.dart';
 import '../widgets/file_upload_area.dart';
 import '../services/api_service.dart';
+import 'package:path_provider/path_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,14 +21,15 @@ class _HomePageState extends State<HomePage> {
   String? selectedFileName;
   String? selectedFilePath;
   bool isLoadingFile = false;
-  bool isGeneratingZip = false;
-  String? savedZipPath;
+  bool isGeneratingPdfs = false;
+  List<Employee> employees = [];
+
+
 
   Future<void> pickExcelFile() async {
     try {
       setState(() {
         isLoadingFile = true;
-        savedZipPath = null;
       });
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -53,31 +61,40 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> generatePdfs() async {
+    Future<void> generatePdfs() async {
     if (selectedFilePath == null) return;
-    setState(() { isGeneratingZip = true; savedZipPath = null; });
+
+    setState(() {
+      isGeneratingPdfs = true;
+      employees.clear();
+    });
+
     try {
-      final zipPath = await ApiService.uploadExcelAndGetZip(selectedFilePath!);
-      setState(() { savedZipPath = zipPath; });
+      final employeeList = await ApiService.uploadExcelAndGetPdfLinks(selectedFilePath!);
+      setState(() {
+        employees = employeeList;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Payslips ZIP saved to: $zipPath'),
+          content: Text('Generated ${employeeList.length} payslips.'),
           backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed: $e'),
+          content: Text('Error: $e'),
           backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
-      setState(() { isGeneratingZip = false; });
+      setState(() {
+        isGeneratingPdfs = false;
+      });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -107,8 +124,8 @@ class _HomePageState extends State<HomePage> {
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: isGeneratingZip ? null : () async { await generatePdfs(); },
-                  child: isGeneratingZip
+                  onPressed: isGeneratingPdfs ? null : () async { await generatePdfs(); },
+                  child: isGeneratingPdfs
                       ? Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -128,14 +145,44 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ],
-            if (savedZipPath != null) ...[
-              const SizedBox(height: 32),
-              Text(
-                "Payslips ZIP saved to:\n$savedZipPath",
-                style: const TextStyle(fontSize: 15, color: Colors.black87),
-                textAlign: TextAlign.center,
+                        if (employees.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: employees.length,
+                  itemBuilder: (context, index) {
+                    final employee = employees[index];
+                    return EmployeePdfCard(
+                      employee: employee,
+                      pdfUrl: employee.pdfUrl,
+                      onDownload: () async {
+                        if (employee.pdfUrl != null) {
+                          final response = await http.get(Uri.parse(employee.pdfUrl!));
+                          final dir = await getTemporaryDirectory();
+                          final filePath = '${dir.path}/${employee.name}_${employee.id}.pdf';
+                          final file = File(filePath);
+                          await file.writeAsBytes(response.bodyBytes);
+
+                          await Share.shareXFiles([XFile(filePath)], text: 'Payslip for ${employee.name}');
+
+                          setState(() {
+                            employee.isShared = true;
+                          });
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Shared payslip of ${employee.name}!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      },
+                    );
+                  },
+                ),
               ),
             ]
+
           ],
         ),
       ),

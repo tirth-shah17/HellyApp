@@ -21,7 +21,10 @@ class EmployeePdfCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Color(0xFFE5E7EB)),
+        border: Border.all(
+          color: employee.isShared ? Colors.green : Color(0xFFE5E7EB),
+          width: 2,
+        ),
       ),
       child: Row(
         children: [
@@ -45,7 +48,7 @@ class EmployeePdfCard extends StatelessWidget {
             ),
           ),
           SizedBox(width: 16),
-          
+
           // Employee Details
           Expanded(
             child: Column(
@@ -70,31 +73,36 @@ class EmployeePdfCard extends StatelessWidget {
               ],
             ),
           ),
-          
-          // PDF Status and Download
+
+          // PDF Status and Share
           if (pdfUrl != null) ...[
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Color(0xFFF0FDF4),
+                color: employee.isShared ? Color(0xFFDCFCE7) : Color(0xFFF0FDF4),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Color(0xFFBBF7D0)),
+                border: Border.all(
+                  color: employee.isShared ? Color(0xFF86EFAC) : Color(0xFFBBF7D0),
+                ),
               ),
               child: Text(
-                'Ready',
+                employee.isShared ? 'Shared' : 'Ready',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF15803D),
+                  color: employee.isShared ? Color(0xFF15803D) : Color(0xFF15803D),
                 ),
               ),
             ),
             SizedBox(width: 12),
             IconButton(
               onPressed: onDownload,
-              icon: Icon(Icons.download, size: 20),
+              icon: Icon(
+                employee.isShared ? Icons.check : Icons.share,
+                size: 20,
+              ),
               style: IconButton.styleFrom(
-                backgroundColor: Color(0xFF2C2C2C),
+                backgroundColor: employee.isShared ? Colors.green : Color(0xFF2C2C2C),
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.all(8),
               ),
