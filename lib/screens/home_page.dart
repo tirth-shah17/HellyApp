@@ -128,9 +128,25 @@ void initState() {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Payslip Generator'),
         backgroundColor: Colors.white,
         elevation: 1,
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/viral.png',
+              height: 32, // Adjust size here
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Helly Consultancy Services',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
       ),
       backgroundColor: const Color(0xFFF8F9FA),
       body: Padding(
