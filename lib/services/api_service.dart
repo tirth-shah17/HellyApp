@@ -7,12 +7,16 @@ class ApiService {
   static const String baseUrl = 'https://backend-helly.onrender.com';
 
   /// Uploads an Excel file and returns a List<Employee> from JSON list.
-  static Future<List<Employee>> uploadExcelAndGetPdfLinks(String filePath) async {
+  static Future<List<Employee>> uploadExcelAndGetPdfLinks(String filePath,String month,String years,String fullDate) async {
     var request = http.MultipartRequest(
       'POST',
       Uri.parse('$baseUrl/generate-pdfs/'),
     );
     request.files.add(await http.MultipartFile.fromPath('file', filePath));
+    request.fields['month'] = month;
+    request.fields['year'] = years;
+    request.fields['date'] = fullDate;
+
 
     var streamedResponse = await request.send();
 

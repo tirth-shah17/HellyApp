@@ -25,8 +25,24 @@ class _HomePageState extends State<HomePage> {
   bool isLoadingFile = false;
   bool isGeneratingPdfs = false;
   List<Employee> employees = [];
+  String? selectedMonth;
+  String? selectedYear;
+  DateTime? selectedDate;
 
+  
 
+final List<String> months = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+late List<String> years;
+
+@override
+void initState() {
+  super.initState();
+  years = List.generate(10, (index) => (DateTime.now().year - index).toString());
+}
 
   Future<void> pickExcelFile() async {
     try {
@@ -64,38 +80,48 @@ class _HomePageState extends State<HomePage> {
   }
 
     Future<void> generatePdfs() async {
-    if (selectedFilePath == null) return;
+  if (selectedFilePath == null || selectedDate == null) return;
+
+  setState(() {
+    isGeneratingPdfs = true;
+    employees.clear();
+  });
+
+  try {
+    // 👇 Format the date as "dd-MMMM-yyyy" (e.g., "02-August-2025")
+    final fullDate = "${selectedDate!.day.toString().padLeft(2, '0')}-${selectedMonth!}-${selectedYear!}";
+
+    final employeeList = await ApiService.uploadExcelAndGetPdfLinks(
+      selectedFilePath!,
+      selectedMonth!,
+      selectedYear!,
+      fullDate, // 👈 Now properly defined and passed
+    );
 
     setState(() {
-      isGeneratingPdfs = true;
-      employees.clear();
+      employees = employeeList;
     });
 
-    try {
-      final employeeList = await ApiService.uploadExcelAndGetPdfLinks(selectedFilePath!);
-      setState(() {
-        employees = employeeList;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Generated ${employeeList.length} payslips.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() {
-        isGeneratingPdfs = false;
-      });
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Generated ${employeeList.length} payslips.'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    setState(() {
+      isGeneratingPdfs = false;
+    });
   }
+}
+
 
 
   @override
@@ -119,9 +145,37 @@ class _HomePageState extends State<HomePage> {
               isLoading: isLoadingFile,
               fileName: selectedFileName,
             ),
+            const SizedBox(height: 16),
+TextFormField(
+  readOnly: true,
+  decoration: const InputDecoration(
+    labelText: 'Select Date',
+    suffixIcon: Icon(Icons.calendar_today),
+  ),
+  controller: TextEditingController(
+    text: selectedDate != null
+        ? '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
+        : '',
+  ),
+  onTap: () async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() {
+        selectedDate = picked;
+        selectedMonth = months[picked.month - 1]; // converts number to month name
+        selectedYear = picked.year.toString();
+      });
+    }
+  },
+),
             const SizedBox(height: 24),
             // --- Show "Generate PDFs" and result only below the upload area ---
-            if (selectedFileName != null) ...[
+            if (selectedFileName != null && selectedMonth != null && selectedYear != null) ...[
               SizedBox(
                 width: double.infinity,
                 height: 48,
